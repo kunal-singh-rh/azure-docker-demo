@@ -7,12 +7,16 @@ pool:
 variables:
   imageRepository: webapp
   dockerRegistryServiceConnection: acr-sc
+  sshServiceConnection: vm-ssh-sc
   dockerfilePath: Dockerfile
   tag: latest
 
 steps:
+
+# Step 1: Checkout GitHub Code
 - checkout: self
 
+# Step 2: Build and Push Docker Image to ACR
 - task: Docker@2
   displayName: Build and Push Image to ACR
   inputs:
@@ -23,3 +27,31 @@ steps:
     tags: |
       $(tag)
       $(Build.BuildId)
+
+
+
+- task: SSH@0
+  displayName: Deploy Latest Image on Azure VM
+  inputs:
+    sshEndpoint: vm-ssh-sc
+    runOptions: commands
+    commands: |
+      set -e
+
+      echo "Logging into ACR..."
+
+      printf '%s' "$(ACR_PASSWORD)" | docker login --username "$(ACR_USERNAME)" --password-stdin kunaldemocicd.azurecr.io
+
+      echo "Pulling latest image..."
+      docker pull kunaldemocicd.azurecr.io/webapp:latest
+
+      echo "Removing old container if exists..."
+      docker ps -aq --filter "name=^webapp$" | xargs -r docker rm -f
+
+      echo "Launching new container..."
+      docker run -d --name webapp --restart unless-stopped -p 80:80 kunaldemocicd.azurecr.io/webapp:latest
+
+      echo "Checking deployment..."
+      docker ps
+
+      echo "Deployment completed successfully!"
