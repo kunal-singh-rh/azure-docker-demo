@@ -1,5 +1,6 @@
+
 trigger:
-- main
+  - main
 
 pool:
   vmImage: ubuntu-latest
@@ -7,14 +8,20 @@ pool:
 variables:
   imageRepository: webapp
   dockerRegistryServiceConnection: acr-sc
-  sshServiceConnection: vm-ssh-sc
+  azureServiceConnection: azure-aks-sc
+
   dockerfilePath: Dockerfile
   tag: latest
+
+  azureResourceGroup: rg-cicd-demo
+  aksClusterName: aks-cicd-demo
+  kubernetesNamespace: webapp
 
 steps:
 
 # Step 1: Checkout GitHub Code
 - checkout: self
+
 
 # Step 2: Build and Push Docker Image to ACR
 - task: Docker@2
@@ -29,29 +36,30 @@ steps:
       $(Build.BuildId)
 
 
+# Step 3: Deploy Application on AKS
+- task: KubernetesManifest@1
+  displayName: Deploy Application to AKS
 
-- task: SSH@0
-  displayName: Deploy Latest Image on Azure VM
   inputs:
-    sshEndpoint: vm-ssh-sc
-    runOptions: commands
-    commands: |
-      set -e
+    action: deploy
 
-      echo "Logging into ACR..."
+    connectionType: azureResourceManager
 
-      printf '%s' "$(ACR_PASSWORD)" | docker login --username "$(ACR_USERNAME)" --password-stdin kunaldemocicd.azurecr.io
+    azureSubscriptionConnection: $(azureServiceConnection)
 
-      echo "Pulling latest image..."
-      docker pull kunaldemocicd.azurecr.io/webapp:latest
+    azureResourceGroup: $(azureResourceGroup)
 
-      echo "Removing old container if exists..."
-      docker ps -aq --filter "name=^webapp$" | xargs -r docker rm -f
+    kubernetesCluster: $(aksClusterName)
 
-      echo "Launching new container..."
-      docker run -d --name webapp --restart unless-stopped -p 80:80 kunaldemocicd.azurecr.io/webapp:latest
+    useClusterAdmin: false
 
-      echo "Checking deployment..."
-      docker ps
+    namespace: $(kubernetesNamespace)
 
-      echo "Deployment completed successfully!"
+    manifests: |
+      $(Build.SourcesDirectory)/k8s/deployment.yaml
+      $(Build.SourcesDirectory)/k8s/service.yaml
+
+    containers: |
+      kunaldemocicd.azurecr.io/webapp:$(Build.BuildId)
+
+    rolloutStatusTimeout: 180
