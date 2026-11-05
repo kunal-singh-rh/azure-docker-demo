@@ -39,23 +39,20 @@ steps:
 # Step 3: Deploy Application on AKS
 - task: KubernetesManifest@1
   displayName: Deploy Application to AKS
-
   inputs:
     action: deploy
 
     connectionType: azureResourceManager
-
     azureSubscriptionConnection: $(azureServiceConnection)
-
     azureResourceGroup: $(azureResourceGroup)
-
     kubernetesCluster: $(aksClusterName)
 
-    useClusterAdmin: false
+    useClusterAdmin: true
 
-    namespace: $(kubernetesNamespace)
+    namespace: default
 
     manifests: |
+      $(Build.SourcesDirectory)/k8s/namespace.yaml
       $(Build.SourcesDirectory)/k8s/deployment.yaml
       $(Build.SourcesDirectory)/k8s/service.yaml
 
