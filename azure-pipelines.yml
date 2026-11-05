@@ -8,13 +8,13 @@ pool:
 variables:
   imageRepository: webapp
   dockerRegistryServiceConnection: acr-sc
-  azureServiceConnection: azure-aks-sc
+  azureServiceConnection: AB
 
   dockerfilePath: Dockerfile
   tag: latest
 
   azureResourceGroup: rg-cicd-demo
-  aksClusterName: aks-cicd-demo
+  aksClusterName: A
   kubernetesNamespace: webapp
 
 steps:
