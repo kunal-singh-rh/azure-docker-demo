@@ -49,7 +49,7 @@ steps:
 
     useClusterAdmin: true
 
-    namespace: default
+    namespace: webapp
 
     manifests: |
       $(Build.SourcesDirectory)/k8s/namespace.yaml
